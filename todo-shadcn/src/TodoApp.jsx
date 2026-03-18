@@ -5,16 +5,24 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox'
+import { useToast } from '@/components/ui/use-toast'
+import { useNotificationContext } from '@/context/NotificationManager.tsx'
 import {
   DataTable
 } from '@/components/DataTable'
+import { Toaster } from '@/components/ui/toaster'
 
 function TodoApp() {
   const [todos, setTodos] = useState([]);
   const [newTodo, setNewTodo] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState('');
-  const [deleteDialogId, setDeleteDialogId] = useState(null);
+const [deleteDialogId, setDeleteDialogId] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [search, setSearch] = useState('');
+  const { toast } = useToast();
+  const { showBrowserNotification, permission, requestPermission } = useNotificationContext();
+  const [notification, setNotification] = useState({ message: '', variant: 'success' });
 
   // Load todos from localStorage
   useEffect(() => {
@@ -29,7 +37,12 @@ function TodoApp() {
     localStorage.setItem('todos', JSON.stringify(todos));
   }, [todos]);
 
-  const addTodo = () => {
+  const showMessage = (msg, variant = 'success') => {
+    setNotification({ message: msg, variant });
+    setTimeout(() => setNotification({ message: '', variant: 'success' }), 3000);
+  };
+
+const addTodo = () => {
     if (newTodo.trim()) {
       setTodos([
         ...todos, 
@@ -40,6 +53,11 @@ function TodoApp() {
         }
       ]);
       setNewTodo('');
+      toast({
+        title: "Task added successfully!",
+      });
+      showBrowserNotification('Task Added!', { body: newTodo });
+      showMessage('✅ Task Added!');
     }
   };
 
@@ -49,11 +67,24 @@ function TodoApp() {
         ? { ...todo, completed: !todo.completed } 
         : todo
     ));
+    const todo = todos.find(t => t.id === id);
+    const status = todo?.completed ? 'pending' : 'done';
+    toast({
+      title: todo?.completed ? "Task marked pending!" : "Task marked done!",
+    });
+    showBrowserNotification(`Task marked ${status}!`, { body: todo?.text });
+    showMessage(todo?.completed ? '📋 Task marked pending!' : '✔️ Task marked done!');
   };
 
   const deleteTodo = (id) => {
     setTodos(todos.filter(todo => todo.id !== id));
     setDeleteDialogId(null);
+    toast({
+      title: "Task deleted.",
+      variant: "destructive"
+    });
+    showBrowserNotification('Task Deleted!', { body: 'Check your todo list.' });
+    showMessage('🗑️ Task Deleted!', 'destructive');
   };
 
   const startEdit = (id, text) => {
@@ -68,6 +99,11 @@ function TodoApp() {
           ? { ...todo, text: editText.trim() } 
           : todo
       ));
+    toast({
+      title: "Task updated!",
+    });
+    showBrowserNotification('Task Updated!', { body: editText });
+    showMessage('✏️ Task Updated!');
     }
     setEditingId(null);
     setEditText('');
@@ -82,10 +118,48 @@ function TodoApp() {
     setDeleteDialogId(id);
   };
 
-  const completedCount = todos.filter(t => t.completed).length;
-  const totalCount = todos.length;
-  const uncompleted = todos.filter(t => !t.completed);
-  const completed = todos.filter(t => t.completed);
+  const handleSelectToggle = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id)
+        ? prev.filter((selectedId) => selectedId !== id)
+        : [...prev, id]
+    );
+  };
+
+  const deleteSelected = () => {
+    setTodos(todos.filter((todo) => !selectedIds.includes(todo.id)));
+    setSelectedIds([]);
+    toast({
+      title: "Tasks Deleted",
+      variant: "destructive"
+    });
+    showBrowserNotification(`${selectedIds.length} Tasks Deleted!`);
+    showMessage(`🗑️ ${selectedIds.length} Tasks Deleted!`, 'destructive');
+  };
+
+  const markDoneSelected = () => {
+    setTodos(
+      todos.map((todo) =>
+        selectedIds.includes(todo.id) ? { ...todo, completed: true } : todo
+      )
+    );
+    setSelectedIds([]);
+    toast({
+      title: "Tasks Marked Done",
+      variant: "success"
+    });
+    showBrowserNotification(`${selectedIds.length} Tasks Marked Done!`);
+    showMessage(`✔️ ${selectedIds.length} Tasks Marked Done!`);
+  };
+
+  const filteredTodos = todos.filter((todo) =>
+    todo.text.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const completedCount = filteredTodos.filter((t) => t.completed).length;
+  const totalCount = filteredTodos.length;
+  const uncompleted = filteredTodos.filter((t) => !t.completed);
+  const completed = filteredTodos.filter((t) => t.completed);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/30 to-slate-900 p-8 flex items-center justify-center">
@@ -102,8 +176,30 @@ function TodoApp() {
             <Badge variant={completedCount === totalCount ? "default" : "secondary"} className="bg-emerald-500/20 border-emerald-500/50 text-emerald-200">
               {completedCount} done
             </Badge>
+            {permission !== 'granted' && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => requestPermission()}
+                className="text-xs border-purple-500/50 hover:bg-purple-500/10"
+              >
+                🔔 Enable Notifications
+              </Button>
+            )}
           </div>
         </CardHeader>
+
+        {notification.message && (
+          <CardContent className="p-4">
+            <div className={`p-4 rounded-lg text-white font-medium text-center transition-all duration-300 ${
+              notification.variant === 'success' 
+                ? 'bg-green-500/90 backdrop-blur-sm border border-green-400/50' 
+                : 'bg-red-500/90 backdrop-blur-sm border border-red-400/50'
+            }`}>
+              {notification.message}
+            </div>
+          </CardContent>
+        )}
 
         {/* Input */}
         <CardContent className="pb-4">
@@ -121,13 +217,47 @@ function TodoApp() {
           </div>
         </CardContent>
 
+        {/* Search */}
+        <CardContent className="pb-6">
+          <div className="flex gap-2 items-center">
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search tasks..."
+              className="flex-1 bg-white/10 border-white/20 text-white placeholder-gray-400 focus-visible:ring-purple-500 focus-visible:ring-2"
+            />
+            {selectedIds.length > 0 && (
+              <div className="flex gap-2">
+                <Button
+                  onClick={deleteSelected}
+                  variant="destructive"
+                  size="sm"
+                  className="bg-destructive/90 hover:bg-destructive text-destructive-foreground"
+                >
+                  Delete Selected ({selectedIds.length})
+                </Button>
+                <Button
+                  onClick={markDoneSelected}
+                  variant="default"
+                  size="sm"
+                  className="bg-emerald-600 hover:bg-emerald-500"
+                >
+                  Mark Done ({selectedIds.length})
+                </Button>
+              </div>
+            )}
+          </div>
+        </CardContent>
+
         {/* Todos Table */}
         <CardContent className="p-6 max-h-96 overflow-hidden">
           <DataTable
-            todos={todos}
+            todos={filteredTodos}
+            selectedIds={selectedIds}
             editingId={editingId}
             editText={editText}
             onToggle={toggleTodo}
+            onSelectToggle={handleSelectToggle}
             onEditStart={startEdit}
             onSaveEdit={saveEdit}
             onCancelEdit={cancelEdit}
@@ -156,6 +286,8 @@ function TodoApp() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Toaster />
     </div>
   );
 }

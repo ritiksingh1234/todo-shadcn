@@ -20,6 +20,8 @@ interface Todo {
 
 interface DataTableProps {
   todos: Todo[]
+  selectedIds: number[]
+  onSelectToggle: (id: number) => void
   editingId: number | null
   editText: string
   onToggle: (id: number) => void
@@ -32,6 +34,8 @@ interface DataTableProps {
 
 export function DataTable({
   todos,
+  selectedIds,
+  onSelectToggle,
   editingId,
   editText,
   onToggle,
@@ -41,11 +45,36 @@ export function DataTable({
   onDelete,
   setEditText
 }: DataTableProps) {
+  const allSelected = todos.length > 0 && todos.every(todo => selectedIds.includes(todo.id));
+  const isIndeterminate = selectedIds.length > 0 && selectedIds.length < todos.length;
+  const selectAllChecked = allSelected ? true : isIndeterminate ? 'indeterminate' : false;
+
+  const handleSelectAll = () => {
+    if (allSelected) {
+      // deselect all visible
+      todos.forEach(todo => onSelectToggle(todo.id));
+    } else {
+      // select all visible
+      todos.forEach(todo => {
+        if (!selectedIds.includes(todo.id)) {
+          onSelectToggle(todo.id);
+        }
+      });
+    }
+  };
+
   return (
     <div className="rounded-md border bg-background/80">
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead className="w-[50px]">
+              <Checkbox
+                checked={selectAllChecked === true}
+                indeterminate={selectAllChecked === 'indeterminate'}
+                onCheckedChange={handleSelectAll}
+              />
+            </TableHead>
             <TableHead className="w-[50px]">Done</TableHead>
             <TableHead>Task</TableHead>
             <TableHead className="w-[120px]">Status</TableHead>
@@ -53,8 +82,14 @@ export function DataTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {todos.map((todo) => (
+{todos.map((todo) => (
             <TableRow key={todo.id}>
+              <TableCell className="font-medium">
+                <Checkbox
+                  checked={selectedIds.includes(todo.id)}
+                  onCheckedChange={() => onSelectToggle(todo.id)}
+                />
+              </TableCell>
               <TableCell className="font-medium">
                 <Checkbox
                   checked={todo.completed}
