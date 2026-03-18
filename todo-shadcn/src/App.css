@@ -1,0 +1,11 @@
+/* App.css cleaned - no custom styles needed for TodoApp (Tailwind used) */
+
+  &::before {
+    left: 0;
+    border-left-color: var(--border);
+  }
+  &::after {
+    right: 0;
+    border-right-color: var(--border);
+  }
+

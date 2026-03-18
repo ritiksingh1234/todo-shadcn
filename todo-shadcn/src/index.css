@@ -1,0 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import "tw-animate-css";
+@import "@fontsource-variable/geist-sans";
+@import "@fontsource-variable/geist-mono";
