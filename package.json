@@ -1,0 +1,11 @@
+{
+  "name": "todo-shadcn-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "cd todo-shadcn && npm run dev",
+    "build": "cd todo-shadcn && npm run build",
+    "lint": "cd todo-shadcn && npm run lint",
+    "preview": "cd todo-shadcn && npm run preview"
+  }
+}
