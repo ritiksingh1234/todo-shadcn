@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox'
 import { useToast } from '@/components/ui/use-toast'
 import { useNotificationContext } from '@/context/NotificationManager.tsx'
@@ -17,9 +18,11 @@ function TodoApp() {
   const [newTodo, setNewTodo] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState('');
-const [deleteDialogId, setDeleteDialogId] = useState(null);
+  const [deleteDialogId, setDeleteDialogId] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [search, setSearch] = useState('');
+  const [pageIndex, setPageIndex] = useState(0);
+  const [rowsPerPage] = useState(5);
   const { toast } = useToast();
   const { showBrowserNotification, permission, requestPermission } = useNotificationContext();
   const [notification, setNotification] = useState({ message: '', variant: 'success' });
@@ -29,20 +32,54 @@ const [deleteDialogId, setDeleteDialogId] = useState(null);
     const saved = localStorage.getItem('todos');
     if (saved) {
       setTodos(JSON.parse(saved));
+    } else {
+      const sampleTodos = [
+        { id: 1, text: 'Learn React Hooks', completed: false },
+        { id: 2, text: 'Build todo app', completed: true },
+        { id: 3, text: 'Deploy to Vercel', completed: false },
+        { id: 4, text: 'Write tests', completed: false },
+        { id: 5, text: 'Add pagination', completed: true },
+        { id: 6, text: 'Implement bulk delete', completed: false }
+      ];
+      setTodos(sampleTodos);
+      localStorage.setItem('todos', JSON.stringify(sampleTodos));
     }
   }, []);
 
-  // Save todos to localStorage
+// Save todos to localStorage
   useEffect(() => {
     localStorage.setItem('todos', JSON.stringify(todos));
   }, [todos]);
+
+  const filteredTodos = todos.filter((todo) =>
+    todo.text.toLowerCase().includes(search.toLowerCase())
+  );
+  const totalFiltered = filteredTodos.length;
+  const totalTodos = todos.length;
+  const paginatedTodos = filteredTodos.slice(pageIndex * rowsPerPage, (pageIndex + 1) * rowsPerPage);
+  const startEntry = pageIndex * rowsPerPage + 1;
+  const endEntry = Math.min((pageIndex + 1) * rowsPerPage, totalFiltered);
+  const pageCount = Math.ceil(totalFiltered / rowsPerPage);
+
+  const completedCount = filteredTodos.filter((t) => t.completed).length;
+  const totalCount = totalFiltered;
+  const uncompleted = filteredTodos.filter((t) => !t.completed);
+  const completed = filteredTodos.filter((t) => t.completed);
+
+  // Reset page if filtered results don't fill current page
+  useEffect(() => {
+    const maxPage = Math.floor(filteredTodos.length / rowsPerPage);
+    if (pageIndex > maxPage) {
+      setPageIndex(0);
+    }
+  }, [filteredTodos.length]);
 
   const showMessage = (msg, variant = 'success') => {
     setNotification({ message: msg, variant });
     setTimeout(() => setNotification({ message: '', variant: 'success' }), 3000);
   };
 
-const addTodo = () => {
+  const addTodo = () => {
     if (newTodo.trim()) {
       setTodos([
         ...todos, 
@@ -99,11 +136,11 @@ const addTodo = () => {
           ? { ...todo, text: editText.trim() } 
           : todo
       ));
-    toast({
-      title: "Task updated!",
-    });
-    showBrowserNotification('Task Updated!', { body: editText });
-    showMessage('✏️ Task Updated!');
+      toast({
+        title: "Task updated!",
+      });
+      showBrowserNotification('Task Updated!', { body: editText });
+      showMessage('✏️ Task Updated!');
     }
     setEditingId(null);
     setEditText('');
@@ -152,15 +189,6 @@ const addTodo = () => {
     showMessage(`✔️ ${selectedIds.length} Tasks Marked Done!`);
   };
 
-  const filteredTodos = todos.filter((todo) =>
-    todo.text.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const completedCount = filteredTodos.filter((t) => t.completed).length;
-  const totalCount = filteredTodos.length;
-  const uncompleted = filteredTodos.filter((t) => !t.completed);
-  const completed = filteredTodos.filter((t) => t.completed);
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/30 to-slate-900 p-8 flex items-center justify-center">
       <Card className="w-full max-w-2xl mx-auto shadow-2xl border-0 bg-white/5 backdrop-blur-xl">
@@ -169,13 +197,16 @@ const addTodo = () => {
           <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-indigo-400 bg-clip-text text-transparent">
             My Todos
           </CardTitle>
-          <div className="flex gap-2 justify-center items-center mt-2">
-            <Badge variant="secondary" className="bg-purple-500/20 border-purple-500/50 text-purple-200">
-              {totalCount} total
+          <div className="flex gap-2 justify-center items-center mt-2 flex-wrap">
+              <Badge variant="secondary" className="bg-purple-500/20 border-purple-500/50 text-purple-200">
+              {totalTodos} total
             </Badge>
             <Badge variant={completedCount === totalCount ? "default" : "secondary"} className="bg-emerald-500/20 border-emerald-500/50 text-emerald-200">
               {completedCount} done
             </Badge>
+            <Link to="/add" className="text-xs bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-400 text-white px-3 py-1 rounded-md font-medium transition-all">
+              ➕ New Todo
+            </Link>
             {permission !== 'granted' && (
               <Button 
                 variant="outline" 
@@ -220,12 +251,23 @@ const addTodo = () => {
         {/* Search */}
         <CardContent className="pb-6">
           <div className="flex gap-2 items-center">
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search tasks..."
-              className="flex-1 bg-white/10 border-white/20 text-white placeholder-gray-400 focus-visible:ring-purple-500 focus-visible:ring-2"
-            />
+            <div className="relative flex-1">
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search tasks..."
+                className="pl-10 bg-white/10 border-white/20 text-white placeholder-gray-400 focus-visible:ring-purple-500 focus-visible:ring-2"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 p-0 text-muted-foreground hover:text-foreground"
+                onClick={() => setSearch('')}
+              >
+                {search ? '✕' : '🔍'}
+              </Button>
+            </div>
             {selectedIds.length > 0 && (
               <div className="flex gap-2">
                 <Button
@@ -252,8 +294,8 @@ const addTodo = () => {
         {/* Todos Table */}
         <CardContent className="p-6 max-h-96 overflow-hidden">
           <DataTable
-            todos={filteredTodos}
-            selectedIds={selectedIds}
+            todos={paginatedTodos}
+            selectedIds={selectedIds.filter(id => paginatedTodos.some(todo => todo.id === id))}
             editingId={editingId}
             editText={editText}
             onToggle={toggleTodo}
@@ -263,7 +305,14 @@ const addTodo = () => {
             onCancelEdit={cancelEdit}
             onDelete={showDeleteDialog}
             setEditText={setEditText}
+            currentPage={pageIndex}
+            rowsPerPage={rowsPerPage}
+            totalCount={totalFiltered}
+            startEntry={startEntry}
+            endEntry={endEntry}
+            onPageChange={(page) => setPageIndex(page)}
           />
+          {/* Pagination moved to DataTable */}
         </CardContent>
       </Card>
 
@@ -292,6 +341,5 @@ const addTodo = () => {
   );
 }
 
-
-
 export default TodoApp;
+
