@@ -1,12 +1,17 @@
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import TodoApp from "./TodoApp.jsx";
+import AddTodoPage from "./AddTodoPage.jsx";
 import { NotificationProvider } from "./context/NotificationManager.tsx";
 
 function App() {
   return (
     <NotificationProvider>
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/30 to-slate-900 p-4">
-        <TodoApp />
-      </div>
+      <Router>
+        <Routes>
+          <Route path="/" element={<TodoApp />} />
+          <Route path="/add" element={<AddTodoPage />} />
+        </Routes>
+      </Router>
     </NotificationProvider>
   );
 }

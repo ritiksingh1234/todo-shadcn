@@ -4,9 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox'
 import { useToast } from '@/components/ui/use-toast'
+import { Plus, Search, X } from 'lucide-react'
 import { useNotificationContext } from '@/context/NotificationManager.tsx'
 import {
   DataTable
@@ -21,8 +22,8 @@ function TodoApp() {
   const [deleteDialogId, setDeleteDialogId] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [search, setSearch] = useState('');
-  const [pageIndex, setPageIndex] = useState(0);
-  const [rowsPerPage] = useState(5);
+  const [currentPage, setCurrentPage] = useState(1);
+  const todosPerPage = 5;
   const { toast } = useToast();
   const { showBrowserNotification, permission, requestPermission } = useNotificationContext();
   const [notification, setNotification] = useState({ message: '', variant: 'success' });
@@ -54,25 +55,16 @@ function TodoApp() {
   const filteredTodos = todos.filter((todo) =>
     todo.text.toLowerCase().includes(search.toLowerCase())
   );
-  const totalFiltered = filteredTodos.length;
+  const totalPages = Math.ceil(filteredTodos.length / todosPerPage);
+  const indexOfLastTodo = currentPage * todosPerPage;
+  const indexOfFirstTodo = indexOfLastTodo - todosPerPage;
+  const currentTodos = filteredTodos.slice(indexOfFirstTodo, indexOfLastTodo);
   const totalTodos = todos.length;
-  const paginatedTodos = filteredTodos.slice(pageIndex * rowsPerPage, (pageIndex + 1) * rowsPerPage);
-  const startEntry = pageIndex * rowsPerPage + 1;
-  const endEntry = Math.min((pageIndex + 1) * rowsPerPage, totalFiltered);
-  const pageCount = Math.ceil(totalFiltered / rowsPerPage);
 
   const completedCount = filteredTodos.filter((t) => t.completed).length;
-  const totalCount = totalFiltered;
-  const uncompleted = filteredTodos.filter((t) => !t.completed);
-  const completed = filteredTodos.filter((t) => t.completed);
+  const totalFiltered = filteredTodos.length;
 
-  // Reset page if filtered results don't fill current page
-  useEffect(() => {
-    const maxPage = Math.floor(filteredTodos.length / rowsPerPage);
-    if (pageIndex > maxPage) {
-      setPageIndex(0);
-    }
-  }, [filteredTodos.length]);
+
 
   const showMessage = (msg, variant = 'success') => {
     setNotification({ message: msg, variant });
@@ -201,7 +193,7 @@ function TodoApp() {
               <Badge variant="secondary" className="bg-purple-500/20 border-purple-500/50 text-purple-200">
               {totalTodos} total
             </Badge>
-            <Badge variant={completedCount === totalCount ? "default" : "secondary"} className="bg-emerald-500/20 border-emerald-500/50 text-emerald-200">
+            <Badge variant={completedCount === totalFiltered ? "default" : "secondary"} className="bg-emerald-500/20 border-emerald-500/50 text-emerald-200">
               {completedCount} done
             </Badge>
             <Link to="/add" className="text-xs bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-400 text-white px-3 py-1 rounded-md font-medium transition-all">
@@ -242,8 +234,8 @@ function TodoApp() {
               placeholder="Add a new todo..."
               className="flex-1 bg-white/10 border-white/20 text-white placeholder-gray-400 focus-visible:ring-purple-500 focus-visible:ring-2"
             />
-            <Button onClick={addTodo} className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 px-8">
-              Add
+            <Button onClick={addTodo} className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 px-6">
+              <Plus className="h-4 w-4" />
             </Button>
           </div>
         </CardContent>
@@ -265,7 +257,7 @@ function TodoApp() {
                 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 p-0 text-muted-foreground hover:text-foreground"
                 onClick={() => setSearch('')}
               >
-                {search ? '✕' : '🔍'}
+                {search ? <X className="h-3 w-3" /> : <Search className="h-3 w-3" />}
               </Button>
             </div>
             {selectedIds.length > 0 && (
@@ -292,10 +284,10 @@ function TodoApp() {
         </CardContent>
 
         {/* Todos Table */}
-        <CardContent className="p-6 max-h-96 overflow-hidden">
+        <CardContent className="p-6 overflow-y-auto">
           <DataTable
-            todos={paginatedTodos}
-            selectedIds={selectedIds.filter(id => paginatedTodos.some(todo => todo.id === id))}
+            todos={currentTodos}
+            selectedIds={selectedIds.filter(id => currentTodos.some(todo => todo.id === id))}
             editingId={editingId}
             editText={editText}
             onToggle={toggleTodo}
@@ -305,14 +297,11 @@ function TodoApp() {
             onCancelEdit={cancelEdit}
             onDelete={showDeleteDialog}
             setEditText={setEditText}
-            currentPage={pageIndex}
-            rowsPerPage={rowsPerPage}
-            totalCount={totalFiltered}
-            startEntry={startEntry}
-            endEntry={endEntry}
-            onPageChange={(page) => setPageIndex(page)}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            todosPerPage={todosPerPage}
+            onPageChange={setCurrentPage}
           />
-          {/* Pagination moved to DataTable */}
         </CardContent>
       </Card>
 

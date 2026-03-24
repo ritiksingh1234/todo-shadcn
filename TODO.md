@@ -1,26 +1,25 @@
-# Todo App Complete ✅
+# Todo App - Initialization Complete ✅
 
-## Local Development
-✅ App fully functional with CRUD, localStorage, Shadcn UI table.
+## Current Status
+- [x] Full CRUD with localStorage
+- [x] Search, pagination (5/page), bulk select/delete/mark-done
+- [x] Edit inline, delete confirm dialog
+- [x] Notifications (toast + browser)
+- [x] AddTodoPage (/add route)
+- [x] Shadcn UI components (table, badge, checkbox, etc.)
+- [x] Previous/Next buttons functional
 
-Run:
-```
-cd todo-shadcn
-npm run dev
-```
+**App ready at http://localhost:5173**
 
-## Vercel Deployment Status
-✅ vercel.json configured for Vite static build.
-✅ Vercel CLI installed & logged in.
-⚠️ Git repo exists (main branch, up-to-date with origin/main).
-⚠️ Pending: GitHub repo link (`vercel link`), manual deploy (`vercel`), commit/push recent changes, verify dashboard.
+## Next Features (pick one)
+- [ ] Backend API (Supabase/Node)
+- [ ] User auth (Clerk/Supabase)
+- [ ] Categories/Filters
+- [ ] Drag-drop reorder
+- [ ] PWA install
+- [ ] Export/Import todos
+- [ ] Dark/Light theme toggle
 
-## Next Steps (User Action)
-1. Create GitHub repo (e.g., todo-shadcn).
-2. `cd todo-shadcn && git remote add origin <github-url>`
-3. `git add . && git commit -m "Complete todo app" && git push -u origin main`
-4. `vercel link` (link to GitHub)
-5. `vercel --prod` (deploy)
-6. Visit Vercel dashboard for live URL.
+## Testing
+Add >5 todos → pagination works (Previous/Next buttons enabled/disabled correctly).
 
-App ready - test locally first!

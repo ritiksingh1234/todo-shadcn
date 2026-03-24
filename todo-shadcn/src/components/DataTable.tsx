@@ -11,6 +11,15 @@ import {
   TableRow
 } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
+
+
 
 interface Todo {
   id: number
@@ -30,6 +39,10 @@ interface DataTableProps {
   onCancelEdit: () => void
   onDelete: (id: number) => void
   setEditText: (text: string) => void
+  currentPage: number
+  totalPages: number
+  todosPerPage: number
+  onPageChange: (page: number) => void
 }
 
 export function DataTable({
@@ -43,18 +56,22 @@ export function DataTable({
   onSaveEdit,
   onCancelEdit,
   onDelete,
-  setEditText
+  setEditText,
+  currentPage,
+  totalPages,
+  todosPerPage,
+  onPageChange
 }: DataTableProps) {
   const allSelected = todos.length > 0 && todos.every(todo => selectedIds.includes(todo.id));
-  const isIndeterminate = selectedIds.length > 0 && selectedIds.length < todos.length;
+  const isIndeterminate = todos.some(todo => selectedIds.includes(todo.id)) && !allSelected;
   const selectAllChecked = allSelected ? true : isIndeterminate ? 'indeterminate' : false;
 
   const handleSelectAll = () => {
     if (allSelected) {
-      // deselect all visible
-      todos.forEach(todo => onSelectToggle(todo.id));
+      todos.forEach(todo => {
+        if (selectedIds.includes(todo.id)) onSelectToggle(todo.id);
+      });
     } else {
-      // select all visible
       todos.forEach(todo => {
         if (!selectedIds.includes(todo.id)) {
           onSelectToggle(todo.id);
@@ -63,6 +80,8 @@ export function DataTable({
     }
   };
 
+
+
   return (
     <div className="rounded-md border bg-background/80">
       <Table>
@@ -70,8 +89,7 @@ export function DataTable({
           <TableRow>
             <TableHead className="w-[50px]">
               <Checkbox
-                checked={selectAllChecked === true}
-                indeterminate={selectAllChecked === 'indeterminate'}
+                checked={selectAllChecked}
                 onCheckedChange={handleSelectAll}
               />
             </TableHead>
@@ -82,7 +100,7 @@ export function DataTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-{todos.map((todo) => (
+          {todos.map((todo) => (
             <TableRow key={todo.id}>
               <TableCell className="font-medium">
                 <Checkbox
@@ -149,14 +167,24 @@ export function DataTable({
                     </Button>
                   </>
                 ) : (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => onDelete(todo.id)}
-                    className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/20"
-                  >
-                    🗑️
-                  </Button>
+                  <>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => onEditStart(todo.id, todo.text)}
+                      className="h-8 w-8 p-0 hover:bg-accent text-foreground hover:text-foreground"
+                    >
+                      ✏️
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => onDelete(todo.id)}
+                      className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/20"
+                    >
+                      🗑️
+                    </Button>
+                  </>
                 )}
               </TableCell>
             </TableRow>
@@ -168,7 +196,32 @@ export function DataTable({
           No todos yet. Add one above!
         </div>
       )}
+
+      {totalPages > 0 && (
+        <Pagination className="mt-4 justify-center">
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                onClick={() => currentPage > 1 && onPageChange(currentPage - 1)}
+                text="← Back"
+                className={currentPage <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+              />
+            </PaginationItem>
+            <PaginationItem>
+              <span className="flex h-9 items-center justify-center px-4 text-sm font-medium">
+                Page {currentPage} of {totalPages}
+              </span>
+            </PaginationItem>
+            <PaginationItem>
+              <PaginationNext
+                onClick={() => currentPage < totalPages && onPageChange(currentPage + 1)}
+                text="Next →"
+                className={currentPage >= totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
     </div>
   )
 }
-

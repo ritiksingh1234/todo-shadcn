@@ -2,6 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import "tw-animate-css";
-@import "@fontsource-variable/geist-sans";
-@import "@fontsource-variable/geist-mono";
+body {
+  margin: 0;
+  font-family: 'GeistVar', 'GeistVarFallback', ui-sans-serif, system-ui, sans-serif;
+}
