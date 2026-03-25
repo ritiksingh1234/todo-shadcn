@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,8 +14,89 @@ import {
 } from '@/components/DataTable'
 import { Toaster } from '@/components/ui/toaster'
 
+// Custom hook for managing todos with localStorage persistence
+function useTodos() {
+  const [todos, setTodos] = useState(() => {
+    // Initialize from localStorage on first render
+    try {
+      const saved = localStorage.getItem('todos');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Validate that it's an array
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
+      }
+    } catch (error) {
+      console.error('Error loading todos from localStorage:', error);
+    }
+    return [];
+  });
+
+  // Save to localStorage whenever todos change
+  useEffect(() => {
+    try {
+      localStorage.setItem('todos', JSON.stringify(todos));
+    } catch (error) {
+      console.error('Error saving todos to localStorage:', error);
+    }
+  }, [todos]);
+
+  const addTodo = useCallback((text) => {
+    setTodos(prev => [
+      ...prev,
+      {
+        id: Date.now(),
+        text: text.trim(),
+        completed: false
+      }
+    ]);
+  }, []);
+
+  const toggleTodo = useCallback((id) => {
+    setTodos(prev => prev.map(todo =>
+      todo.id === id
+        ? { ...todo, completed: !todo.completed }
+        : todo
+    ));
+  }, []);
+
+  const deleteTodo = useCallback((id) => {
+    setTodos(prev => prev.filter(todo => todo.id !== id));
+  }, []);
+
+  const updateTodo = useCallback((id, text) => {
+    setTodos(prev => prev.map(todo =>
+      todo.id === id
+        ? { ...todo, text: text.trim() }
+        : todo
+    ));
+  }, []);
+
+  const deleteMultiple = useCallback((ids) => {
+    setTodos(prev => prev.filter(todo => !ids.includes(todo.id)));
+  }, []);
+
+  const markMultipleDone = useCallback((ids) => {
+    setTodos(prev => prev.map(todo =>
+      ids.includes(todo.id)
+        ? { ...todo, completed: true }
+        : todo
+    ));
+  }, []);
+
+  return {
+    todos,
+    addTodo,
+    toggleTodo,
+    deleteTodo,
+    updateTodo,
+    deleteMultiple,
+    markMultipleDone
+  };
+}
+
 function TodoApp() {
-  const [todos, setTodos] = useState([]);
   const [newTodo, setNewTodo] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState('');
@@ -23,42 +104,31 @@ function TodoApp() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const todosPerPage = 5;
+  const ITEMS_PER_PAGE = 5;
   const { toast } = useToast();
   const { showBrowserNotification, permission, requestPermission } = useNotificationContext();
   const [notification, setNotification] = useState({ message: '', variant: 'success' });
 
-  // Load todos from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem('todos');
-    if (saved) {
-      setTodos(JSON.parse(saved));
-    } else {
-      const sampleTodos = [
-        { id: 1, text: 'Learn React Hooks', completed: false },
-        { id: 2, text: 'Build todo app', completed: true },
-        { id: 3, text: 'Deploy to Vercel', completed: false },
-        { id: 4, text: 'Write tests', completed: false },
-        { id: 5, text: 'Add pagination', completed: true },
-        { id: 6, text: 'Implement bulk delete', completed: false }
-      ];
-      setTodos(sampleTodos);
-      localStorage.setItem('todos', JSON.stringify(sampleTodos));
-    }
-  }, []);
+  // Use the custom hook for todos management
+  const { todos, addTodo, toggleTodo, deleteTodo, updateTodo, deleteMultiple, markMultipleDone } = useTodos();
 
-// Save todos to localStorage
-  useEffect(() => {
-    localStorage.setItem('todos', JSON.stringify(todos));
-  }, [todos]);
 
   const filteredTodos = todos.filter((todo) =>
     todo.text.toLowerCase().includes(search.toLowerCase())
   );
-  const totalPages = Math.ceil(filteredTodos.length / todosPerPage);
-  const indexOfLastTodo = currentPage * todosPerPage;
-  const indexOfFirstTodo = indexOfLastTodo - todosPerPage;
-  const currentTodos = filteredTodos.slice(indexOfFirstTodo, indexOfLastTodo);
+
+  // Pagination constants and logic
+  const shouldPaginate = todos.length > 5;
+  const effectiveItemsPerPage = shouldPaginate ? ITEMS_PER_PAGE : filteredTodos.length;
+  const totalPages = Math.ceil(filteredTodos.length / effectiveItemsPerPage);
+  const startIndex = (currentPage - 1) * effectiveItemsPerPage;
+  const currentTodos = filteredTodos.slice(startIndex, startIndex + effectiveItemsPerPage);
+
+  // Reset page to 1 when todos or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [todos, search]);
+
   const totalTodos = todos.length;
 
   const completedCount = filteredTodos.filter((t) => t.completed).length;
@@ -71,16 +141,9 @@ function TodoApp() {
     setTimeout(() => setNotification({ message: '', variant: 'success' }), 3000);
   };
 
-  const addTodo = () => {
+  const handleAddTodo = () => {
     if (newTodo.trim()) {
-      setTodos([
-        ...todos, 
-        { 
-          id: Date.now(), 
-          text: newTodo.trim(), 
-          completed: false 
-        }
-      ]);
+      addTodo(newTodo);
       setNewTodo('');
       toast({
         title: "Task added successfully!",
@@ -90,13 +153,9 @@ function TodoApp() {
     }
   };
 
-  const toggleTodo = (id) => {
-    setTodos(todos.map(todo => 
-      todo.id === id 
-        ? { ...todo, completed: !todo.completed } 
-        : todo
-    ));
+  const handleToggleTodo = (id) => {
     const todo = todos.find(t => t.id === id);
+    toggleTodo(id);
     const status = todo?.completed ? 'pending' : 'done';
     toast({
       title: todo?.completed ? "Task marked pending!" : "Task marked done!",
@@ -105,8 +164,8 @@ function TodoApp() {
     showMessage(todo?.completed ? '📋 Task marked pending!' : '✔️ Task marked done!');
   };
 
-  const deleteTodo = (id) => {
-    setTodos(todos.filter(todo => todo.id !== id));
+  const handleDeleteTodo = (id) => {
+    deleteTodo(id);
     setDeleteDialogId(null);
     toast({
       title: "Task deleted.",
@@ -123,11 +182,7 @@ function TodoApp() {
 
   const saveEdit = () => {
     if (editText.trim()) {
-      setTodos(todos.map(todo => 
-        todo.id === editingId 
-          ? { ...todo, text: editText.trim() } 
-          : todo
-      ));
+      updateTodo(editingId, editText);
       toast({
         title: "Task updated!",
       });
@@ -156,7 +211,7 @@ function TodoApp() {
   };
 
   const deleteSelected = () => {
-    setTodos(todos.filter((todo) => !selectedIds.includes(todo.id)));
+    deleteMultiple(selectedIds);
     setSelectedIds([]);
     toast({
       title: "Tasks Deleted",
@@ -167,11 +222,7 @@ function TodoApp() {
   };
 
   const markDoneSelected = () => {
-    setTodos(
-      todos.map((todo) =>
-        selectedIds.includes(todo.id) ? { ...todo, completed: true } : todo
-      )
-    );
+    markMultipleDone(selectedIds);
     setSelectedIds([]);
     toast({
       title: "Tasks Marked Done",
@@ -180,6 +231,7 @@ function TodoApp() {
     showBrowserNotification(`${selectedIds.length} Tasks Marked Done!`);
     showMessage(`✔️ ${selectedIds.length} Tasks Marked Done!`);
   };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/30 to-slate-900 p-8 flex items-center justify-center">
@@ -230,15 +282,16 @@ function TodoApp() {
             <Input
               value={newTodo}
               onChange={(e) => setNewTodo(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && addTodo()}
+              onKeyDown={(e) => e.key === 'Enter' && handleAddTodo()}
               placeholder="Add a new todo..."
               className="flex-1 bg-white/10 border-white/20 text-white placeholder-gray-400 focus-visible:ring-purple-500 focus-visible:ring-2"
             />
-            <Button onClick={addTodo} className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 px-6">
+            <Button onClick={handleAddTodo} className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 px-6">
               <Plus className="h-4 w-4" />
             </Button>
           </div>
         </CardContent>
+
 
         {/* Search */}
         <CardContent className="pb-6">
@@ -285,23 +338,32 @@ function TodoApp() {
 
         {/* Todos Table */}
         <CardContent className="p-6 overflow-y-auto">
-          <DataTable
-            todos={currentTodos}
-            selectedIds={selectedIds.filter(id => currentTodos.some(todo => todo.id === id))}
-            editingId={editingId}
-            editText={editText}
-            onToggle={toggleTodo}
-            onSelectToggle={handleSelectToggle}
-            onEditStart={startEdit}
-            onSaveEdit={saveEdit}
-            onCancelEdit={cancelEdit}
-            onDelete={showDeleteDialog}
-            setEditText={setEditText}
-            currentPage={currentPage}
-            totalPages={totalPages}
-            todosPerPage={todosPerPage}
-            onPageChange={setCurrentPage}
-          />
+          {totalFiltered === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4 opacity-50">📝</div>
+              <p className="text-xl font-medium text-gray-300">No todos yet</p>
+              <p className="text-sm mt-2 text-gray-500">Add your first task above to get started!</p>
+            </div>
+          ) : (
+            <DataTable
+              todos={currentTodos}
+              selectedIds={selectedIds.filter(id => currentTodos.some(todo => todo.id === id))}
+              editingId={editingId}
+              editText={editText}
+              onToggle={handleToggleTodo}
+              onSelectToggle={handleSelectToggle}
+              onEditStart={startEdit}
+              onSaveEdit={saveEdit}
+              onCancelEdit={cancelEdit}
+              onDelete={showDeleteDialog}
+              setEditText={setEditText}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              todosPerPage={effectiveItemsPerPage}
+              totalTodos={totalFiltered}
+              onPageChange={setCurrentPage}
+            />
+          )}
         </CardContent>
       </Card>
 
@@ -318,12 +380,13 @@ function TodoApp() {
             <Button type="button" variant="outline" onClick={() => setDeleteDialogId(null)}>
               Cancel
             </Button>
-            <Button type="button" variant="destructive" onClick={() => deleteTodo(deleteDialogId)}>
+            <Button type="button" variant="destructive" onClick={() => handleDeleteTodo(deleteDialogId)}>
               Delete
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
 
       <Toaster />
     </div>

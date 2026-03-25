@@ -42,6 +42,7 @@ interface DataTableProps {
   currentPage: number
   totalPages: number
   todosPerPage: number
+  totalTodos: number
   onPageChange: (page: number) => void
 }
 
@@ -60,6 +61,7 @@ export function DataTable({
   currentPage,
   totalPages,
   todosPerPage,
+  totalTodos,
   onPageChange
 }: DataTableProps) {
   const allSelected = todos.length > 0 && todos.every(todo => selectedIds.includes(todo.id));
@@ -79,8 +81,6 @@ export function DataTable({
       });
     }
   };
-
-
 
   return (
     <div className="rounded-md border bg-background/80">
@@ -191,13 +191,13 @@ export function DataTable({
           ))}
         </TableBody>
       </Table>
-      {todos.length === 0 && (
+{todos.length === 0 && (
         <div className="p-8 text-center text-muted-foreground">
           No todos yet. Add one above!
         </div>
       )}
 
-      {totalPages > 0 && (
+      {totalPages > 1 && (
         <Pagination className="mt-4 justify-center">
           <PaginationContent>
             <PaginationItem>

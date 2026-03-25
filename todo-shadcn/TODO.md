@@ -1,12 +1,16 @@
-# Pagination Implementation Steps
+# Pagination Implementation Plan
 
-✅ **1. Create TODO.md** - Track progress (done)
+## Steps:
+1. [x] Update TodoApp.jsx: Add conditional pagination logic based on totalTodos.length <=5 vs >=6
+2. [x] Update DataTable.tsx: Change pagination visibility condition to totalPages > 1
+3. [x] Test: Verify 0 todos (empty), 1-5 todos (list only), 6+ todos (paginated)
+4. [x] Complete task
 
-**2. Update TodoApp.jsx** - 1-based pagination state, slice logic, simple props to DataTable
+✅ Pagination implemented successfully!
 
-✅ **3. Update DataTable.tsx** - Simple custom pagination buttons (done)
+**Behavior**:
+- 0 todos: Empty UI shown
+- 1-5 todos: Full list, no pagination controls
+- 6+ todos: Paginated list with controls (5 per page)
 
-✅ **4. Test** - Server running http://localhost:5175/ - Pagination implemented (done)
-
-**5. Complete task**
-
+Run `npm run dev` to test in browser.
