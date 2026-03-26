@@ -278,7 +278,7 @@ function TodoApp() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search Tasks..."
-                className="pl-10 bg-white/10 border-white/20 text-white placeholder-gray-400 focus-visible:ring-purple-500 focus-visible:ring-2 py-2 text-sm rounded-lg shadow-md"
+                className="pl-10 bg-white/20 border-white/20 text-white placeholder-gray-400 focus-visible:ring-purple-500 focus-visible:ring-2 py-2 text-sm rounded-lg shadow-md"
               />
               <Button
                 type="button"
