@@ -1,25 +1,31 @@
-# Todo App - Initialization Complete ✅
+# Fix TodoApp.jsx Syntax Errors - Progress Tracker
 
-## Current Status
-- [x] Full CRUD with localStorage
-- [x] Search, pagination (5/page), bulk select/delete/mark-done
-- [x] Edit inline, delete confirm dialog
-- [x] Notifications (toast + browser)
-- [x] AddTodoPage (/add route)
-- [x] Shadcn UI components (table, badge, checkbox, etc.)
-- [x] Previous/Next buttons functional
+## Status: [IN PROGRESS]
 
-**App ready at http://localhost:5173**
+### Step 1: ✅ Create this TODO.md file (Current)
 
-## Next Features (pick one)
-- [ ] Backend API (Supabase/Node)
-- [ ] User auth (Clerk/Supabase)
-- [ ] Categories/Filters
-- [ ] Drag-drop reorder
-- [ ] PWA install
-- [ ] Export/Import todos
-- [ ] Dark/Light theme toggle
+### Step 2: Fix state declarations block (malformed \n at search/sort states)
+- Target: Lines ~55-60
+- Replace literal \n block with proper separate useState lines
 
-## Testing
-Add >5 todos → pagination works (Previous/Next buttons enabled/disabled correctly).
+### Step 3: Fix filteredTodos filter (malformed multi-line filter)
+- Target: ~Line 82
+- Proper multi-line arrow function
 
+### Step 4: Fix getComparator and sortedTodos logic
+- Target: ~Lines 90-110
+- Proper function def and useMemo
+
+### Step 5: Fix pagination calculations
+- Target: ~Lines 102+
+- Proper const declarations
+
+### Step 6: Verify toast hook and Toaster
+- Check useToast() call and <Toaster />
+
+### Step 7: Test complete
+- Run `cd todo-shadcn &amp;&amp; npm run dev`
+- Confirm no parser errors
+- Test add/delete/search/sort/paginate/toast
+
+**Next: Step 2**

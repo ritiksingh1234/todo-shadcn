@@ -18,6 +18,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
+import { ArrowUp, ArrowDown } from 'lucide-react'
 
 
 
@@ -44,6 +45,9 @@ interface DataTableProps {
   todosPerPage: number
   totalTodos: number
   onPageChange: (page: number) => void
+  sortBy: string | null
+  sortDir: string
+  onSort: (by: string) => void
 }
 
 export function DataTable({
@@ -62,7 +66,10 @@ export function DataTable({
   totalPages,
   todosPerPage,
   totalTodos,
-  onPageChange
+  onPageChange,
+  sortBy,
+  sortDir,
+  onSort
 }: DataTableProps) {
   const allSelected = todos.length > 0 && todos.every(todo => selectedIds.includes(todo.id));
   const isIndeterminate = todos.some(todo => selectedIds.includes(todo.id)) && !allSelected;
@@ -94,8 +101,32 @@ export function DataTable({
               />
             </TableHead>
             <TableHead className="w-[50px]">Done</TableHead>
-            <TableHead>Task</TableHead>
-            <TableHead className="w-[120px]">Status</TableHead>
+            <TableHead 
+              className="cursor-pointer hover:bg-accent/50 select-none"
+              onClick={() => onSort('task')}
+            >
+              <div className="flex items-center gap-1">
+                Task
+                {sortBy === 'task' && (
+                  sortDir === 'asc' 
+                    ? <ArrowUp className="h-4 w-4" />
+                    : <ArrowDown className="h-4 w-4" />
+                )}
+              </div>
+            </TableHead>
+            <TableHead 
+              className="w-[120px] cursor-pointer hover:bg-accent/50 select-none"
+              onClick={() => onSort('status')}
+            >
+              <div className="flex items-center gap-1">
+                Status
+                {sortBy === 'status' && (
+                  sortDir === 'asc' 
+                    ? <ArrowUp className="h-4 w-4" />
+                    : <ArrowDown className="h-4 w-4" />
+                )}
+              </div>
+            </TableHead>
             <TableHead className="w-[140px]">Actions</TableHead>
           </TableRow>
         </TableHeader>

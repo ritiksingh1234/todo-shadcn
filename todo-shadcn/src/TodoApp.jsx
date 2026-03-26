@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,13 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox'
-import { useToast } from '@/components/ui/use-toast'
 import { Plus, Search, X } from 'lucide-react'
 import { useNotificationContext } from '@/context/NotificationManager.tsx'
 import {
   DataTable
 } from '@/components/DataTable'
-import { Toaster } from '@/components/ui/toaster'
 
 // Custom hook for managing todos with localStorage persistence
 function useTodos() {
@@ -103,26 +101,45 @@ function TodoApp() {
   const [deleteDialogId, setDeleteDialogId] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState(null);
+  const [sortDir, setSortDir] = useState('asc');
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 5;
-  const { toast } = useToast();
   const { showBrowserNotification, permission, requestPermission } = useNotificationContext();
   const [notification, setNotification] = useState({ message: '', variant: 'success' });
 
   // Use the custom hook for todos management
   const { todos, addTodo, toggleTodo, deleteTodo, updateTodo, deleteMultiple, markMultipleDone } = useTodos();
 
-
   const filteredTodos = todos.filter((todo) =>
     todo.text.toLowerCase().includes(search.toLowerCase())
   );
 
+  const getComparator = useCallback((by, dir) => (a, b) => {
+    if (by === 'task') {
+      return dir === 'asc' ? a.text.localeCompare(b.text) : b.text.localeCompare(a.text);
+    }
+    if (by === 'status') {
+      const aVal = a.completed ? 1 : 0;
+      const bVal = b.completed ? 1 : 0;
+      return dir === 'asc' ? aVal - bVal : bVal - aVal;
+    }
+    return 0;
+  }, []);
+
+  const sortedTodos = useMemo(() => {
+    if (!sortBy) return filteredTodos;
+    const arr = [...filteredTodos];
+    arr.sort(getComparator(sortBy, sortDir));
+    return arr;
+  }, [filteredTodos, sortBy, sortDir, getComparator]);
+
   // Pagination constants and logic
   const shouldPaginate = todos.length > 5;
-  const effectiveItemsPerPage = shouldPaginate ? ITEMS_PER_PAGE : filteredTodos.length;
-  const totalPages = Math.ceil(filteredTodos.length / effectiveItemsPerPage);
+  const effectiveItemsPerPage = shouldPaginate ? ITEMS_PER_PAGE : sortedTodos.length;
+  const totalPages = Math.ceil(sortedTodos.length / effectiveItemsPerPage);
   const startIndex = (currentPage - 1) * effectiveItemsPerPage;
-  const currentTodos = filteredTodos.slice(startIndex, startIndex + effectiveItemsPerPage);
+  const currentTodos = sortedTodos.slice(startIndex, startIndex + effectiveItemsPerPage);
 
   // Reset page to 1 when todos or search changes
   useEffect(() => {
@@ -134,8 +151,6 @@ function TodoApp() {
   const completedCount = filteredTodos.filter((t) => t.completed).length;
   const totalFiltered = filteredTodos.length;
 
-
-
   const showMessage = (msg, variant = 'success') => {
     setNotification({ message: msg, variant });
     setTimeout(() => setNotification({ message: '', variant: 'success' }), 3000);
@@ -145,9 +160,6 @@ function TodoApp() {
     if (newTodo.trim()) {
       addTodo(newTodo);
       setNewTodo('');
-      toast({
-        title: "Task added successfully!",
-      });
       showBrowserNotification('Task Added!', { body: newTodo });
       showMessage('✅ Task Added!');
     }
@@ -157,9 +169,6 @@ function TodoApp() {
     const todo = todos.find(t => t.id === id);
     toggleTodo(id);
     const status = todo?.completed ? 'pending' : 'done';
-    toast({
-      title: todo?.completed ? "Task marked pending!" : "Task marked done!",
-    });
     showBrowserNotification(`Task marked ${status}!`, { body: todo?.text });
     showMessage(todo?.completed ? '📋 Task marked pending!' : '✔️ Task marked done!');
   };
@@ -167,10 +176,6 @@ function TodoApp() {
   const handleDeleteTodo = (id) => {
     deleteTodo(id);
     setDeleteDialogId(null);
-    toast({
-      title: "Task deleted.",
-      variant: "destructive"
-    });
     showBrowserNotification('Task Deleted!', { body: 'Check your todo list.' });
     showMessage('🗑️ Task Deleted!', 'destructive');
   };
@@ -183,9 +188,6 @@ function TodoApp() {
   const saveEdit = () => {
     if (editText.trim()) {
       updateTodo(editingId, editText);
-      toast({
-        title: "Task updated!",
-      });
       showBrowserNotification('Task Updated!', { body: editText });
       showMessage('✏️ Task Updated!');
     }
@@ -213,10 +215,6 @@ function TodoApp() {
   const deleteSelected = () => {
     deleteMultiple(selectedIds);
     setSelectedIds([]);
-    toast({
-      title: "Tasks Deleted",
-      variant: "destructive"
-    });
     showBrowserNotification(`${selectedIds.length} Tasks Deleted!`);
     showMessage(`🗑️ ${selectedIds.length} Tasks Deleted!`, 'destructive');
   };
@@ -224,14 +222,18 @@ function TodoApp() {
   const markDoneSelected = () => {
     markMultipleDone(selectedIds);
     setSelectedIds([]);
-    toast({
-      title: "Tasks Marked Done",
-      variant: "success"
-    });
     showBrowserNotification(`${selectedIds.length} Tasks Marked Done!`);
     showMessage(`✔️ ${selectedIds.length} Tasks Marked Done!`);
   };
 
+  const handleSort = (by) => {
+    if (sortBy === by) {
+      setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(by);
+      setSortDir('asc');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/30 to-slate-900 p-8 flex items-center justify-center">
@@ -242,15 +244,12 @@ function TodoApp() {
             My Todos
           </CardTitle>
           <div className="flex gap-2 justify-center items-center mt-2 flex-wrap">
-              <Badge variant="secondary" className="bg-purple-500/20 border-purple-500/50 text-purple-200">
+            <Badge variant="secondary" className="bg-purple-500/20 border-purple-500/50 text-purple-200">
               {totalTodos} total
             </Badge>
             <Badge variant={completedCount === totalFiltered ? "default" : "secondary"} className="bg-emerald-500/20 border-emerald-500/50 text-emerald-200">
               {completedCount} done
             </Badge>
-            <Link to="/add" className="text-xs bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-400 text-white px-3 py-1 rounded-md font-medium transition-all">
-              ➕ New Todo
-            </Link>
             {permission !== 'granted' && (
               <Button 
                 variant="outline" 
@@ -264,76 +263,103 @@ function TodoApp() {
           </div>
         </CardHeader>
 
-        {notification.message && (
-          <CardContent className="p-4">
-            <div className={`p-4 rounded-lg text-white font-medium text-center transition-all duration-300 ${
-              notification.variant === 'success' 
-                ? 'bg-green-500/90 backdrop-blur-sm border border-green-400/50' 
-                : 'bg-red-500/90 backdrop-blur-sm border border-red-400/50'
-            }`}>
-              {notification.message}
-            </div>
-          </CardContent>
-        )}
-
         {/* Input */}
         <CardContent className="pb-4">
-          <div className="flex gap-2">
+          <div className="flex gap-3 items-center">
             <Input
               value={newTodo}
               onChange={(e) => setNewTodo(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleAddTodo()}
-              placeholder="Add a new todo..."
-              className="flex-1 bg-white/10 border-white/20 text-white placeholder-gray-400 focus-visible:ring-purple-500 focus-visible:ring-2"
+              placeholder="Add New Todo"
+              className="flex-1 bg-white/10 border-white/20 text-white placeholder-gray-400 focus-visible:ring-purple-500 focus-visible:ring-2 py-5 text-base"
             />
-            <Button onClick={handleAddTodo} className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 px-6">
-              <Plus className="h-4 w-4" />
+            <Button onClick={handleAddTodo} size="lg" className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 px-8 shadow-lg shadow-purple-500/30 transition-all duration-300 hover:scale-105">
+              <Plus className="h-5 w-5 mr-2" />
+              New Todo
             </Button>
           </div>
         </CardContent>
 
-
-        {/* Search */}
+        {/* Search and Sort */}
         <CardContent className="pb-6">
-          <div className="flex gap-2 items-center">
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* Search Input */}
             <div className="relative flex-1">
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search tasks..."
-                className="pl-10 bg-white/10 border-white/20 text-white placeholder-gray-400 focus-visible:ring-purple-500 focus-visible:ring-2"
+                placeholder="Search Tasks..."
+                className="pl-10 bg-white/10 border-white/20 text-white placeholder-gray-400 focus-visible:ring-purple-500 focus-visible:ring-2 py-5 text-base rounded-lg shadow-md"
               />
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 p-0 text-muted-foreground hover:text-foreground"
+                className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 p-0 text-gray-400 hover:text-white transition-colors"
                 onClick={() => setSearch('')}
               >
-                {search ? <X className="h-3 w-3" /> : <Search className="h-3 w-3" />}
+                {search ? <X className="h-4 w-4" /> : <Search className="h-4 w-4" />}
               </Button>
             </div>
-            {selectedIds.length > 0 && (
-              <div className="flex gap-2">
-                <Button
-                  onClick={deleteSelected}
-                  variant="destructive"
-                  size="sm"
-                  className="bg-destructive/90 hover:bg-destructive text-destructive-foreground"
-                >
-                  Delete Selected ({selectedIds.length})
-                </Button>
-                <Button
-                  onClick={markDoneSelected}
-                  variant="default"
-                  size="sm"
-                  className="bg-emerald-600 hover:bg-emerald-500"
-                >
-                  Mark Done ({selectedIds.length})
-                </Button>
-              </div>
-            )}
+            
+            {/* Sort Buttons */}
+            <div className="flex gap-2">
+              <Button
+                onClick={() => handleSort('task')}
+                variant={sortBy === 'task' ? 'default' : 'outline'}
+                size="lg"
+                className={`${sortBy === 'task' ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-lg shadow-purple-500/30' : 'border-purple-500/50 hover:bg-purple-500/20 text-purple-200 hover:text-white'} transition-all duration-200 hover:scale-105`}
+              >
+                <span className="mr-1">📋</span>
+                Task 
+                {sortBy === 'task' && <span className="ml-1 font-bold">{sortDir === 'asc' ? '↑' : '↓'}</span>}
+              </Button>
+              <Button
+                onClick={() => handleSort('status')}
+                variant={sortBy === 'status' ? 'default' : 'outline'}
+                size="lg"
+                className={`${sortBy === 'status' ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-lg shadow-purple-500/30' : 'border-purple-500/50 hover:bg-purple-500/20 text-purple-200 hover:text-white'} transition-all duration-200 hover:scale-105`}
+              >
+                <span className="mr-1">⚡</span>
+                Status 
+                {sortBy === 'status' && <span className="ml-1 font-bold">{sortDir === 'asc' ? '↑' : '↓'}</span>}
+              </Button>
+            </div>
           </div>
+          
+          {/* Selected Actions */}
+          {selectedIds.length > 0 && (
+            <div className="flex items-center gap-3 mt-4 pt-4 border-t border-white/10">
+              <Button
+                onClick={deleteSelected}
+                size="sm"
+                className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg shadow-purple-500/30 transition-all duration-200 hover:shadow-lg hover:scale-105"
+              >
+                <span className="mr-1">🗑️</span>
+                Delete
+              </Button>
+              <Button
+                onClick={markDoneSelected}
+                size="sm"
+                className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg shadow-purple-500/30 transition-all duration-200 hover:shadow-lg hover:scale-105"
+              >
+                <span className="mr-1">✅</span>
+                Done
+              </Button>
+              {notification.message && (
+                <span className="text-sm text-gray-300 ml-auto animate-pulse">
+                  {notification.message}
+                </span>
+              )}
+            </div>
+          )}
+          
+          {/* Notification */}
+          {notification.message && !selectedIds.length && (
+            <div className="mt-4 text-sm text-gray-300 animate-pulse">
+              {notification.message}
+            </div>
+          )}
         </CardContent>
 
         {/* Todos Table */}
@@ -362,6 +388,9 @@ function TodoApp() {
               todosPerPage={effectiveItemsPerPage}
               totalTodos={totalFiltered}
               onPageChange={setCurrentPage}
+              sortBy={sortBy}
+              sortDir={sortDir}
+              onSort={handleSort}
             />
           )}
         </CardContent>
@@ -386,12 +415,8 @@ function TodoApp() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-
-      <Toaster />
     </div>
   );
 }
 
 export default TodoApp;
-

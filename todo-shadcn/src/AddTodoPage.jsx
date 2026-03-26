@@ -28,6 +28,7 @@ function AddTodoPage() {
 
     toast({
       title: "Task created successfully!",
+      duration: 3000,
     });
     showBrowserNotification('Task Added!', { body: text });
 

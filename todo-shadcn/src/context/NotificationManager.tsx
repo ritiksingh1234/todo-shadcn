@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/components/ui/use-toast-fixed';
 
 interface NotificationContextType {
   showBrowserNotification: (title: string, options?: NotificationOptions) => void;
@@ -15,19 +15,19 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
 const requestPermission = async (): Promise<void> => {
     if (!('Notification' in window)) {
-      toast({ title: 'Browser notifications not supported', variant: 'destructive' });
+      toast({ title: 'Browser notifications not supported', variant: 'destructive', duration: 5000 });
       return;
     }
     try {
       const perm = await Notification.requestPermission();
       setPermission(perm);
       if (perm === 'granted') {
-        toast({ title: 'Browser notifications enabled!' });
+        toast({ title: 'Browser notifications enabled!', duration: 5000 });
       } else {
-        toast({ title: 'Notifications blocked. Using alerts as fallback.', variant: 'destructive' });
+        toast({ title: 'Notifications blocked. Using alerts as fallback.', variant: 'destructive', duration: 5000 });
       }
     } catch (err) {
-      toast({ title: 'Permission request failed', description: err instanceof Error ? err.message : undefined, variant: 'destructive' });
+      toast({ title: 'Permission request failed', description: err instanceof Error ? err.message : undefined, variant: 'destructive', duration: 5000 });
     }
   };
 
