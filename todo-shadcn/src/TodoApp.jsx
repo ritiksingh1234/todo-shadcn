@@ -252,7 +252,7 @@ function TodoApp() {
               </Button>
             )}
           </div>
-          <div className="flex justify-center mt-3">
+          <div className="flex justify-center items-center mt-3 gap-4">
             <Button 
               onClick={() => setIsAddDialogOpen(true)}
               size="lg"
@@ -261,6 +261,11 @@ function TodoApp() {
               <Plus className="h-5 w-5 mr-2" />
               New Todo
             </Button>
+            {notification.message && (
+              <span className="text-sm text-gray-300 animate-pulse whitespace-nowrap">
+                {notification.message}
+              </span>
+            )}
           </div>
         </CardHeader>
 
@@ -268,47 +273,24 @@ function TodoApp() {
         <CardContent className="pb-6">
           <div className="flex flex-col sm:flex-row gap-3">
             {/* Search Input */}
-            <div className="relative flex-1">
+            <div className="relative w-full max-w-md mx-auto">
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search Tasks..."
-                className="pl-10 bg-white/10 border-white/20 text-white placeholder-gray-400 focus-visible:ring-purple-500 focus-visible:ring-2 py-5 text-base rounded-lg shadow-md"
+                className="pl-10 bg-white/10 border-white/20 text-white placeholder-gray-400 focus-visible:ring-purple-500 focus-visible:ring-2 py-2 text-sm rounded-lg shadow-md"
               />
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 p-0 text-gray-400 hover:text-white transition-colors"
+                className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 p-0 text-gray-600 hover:text-white transition-colors"
                 onClick={() => setSearch('')}
               >
                 {search ? <X className="h-4 w-4" /> : <Search className="h-4 w-4" />}
               </Button>
             </div>
             
-            {/* Sort Buttons */}
-            <div className="flex gap-2">
-              <Button
-                onClick={() => handleSort('task')}
-                variant={sortBy === 'task' ? 'default' : 'outline'}
-                size="lg"
-                className={`${sortBy === 'task' ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-lg shadow-purple-500/30' : 'border-purple-500/50 hover:bg-purple-500/20 text-purple-200 hover:text-white'} transition-all duration-200 hover:scale-105`}
-              >
-                <span className="mr-1">📋</span>
-                Task 
-                {sortBy === 'task' && <span className="ml-1 font-bold">{sortDir === 'asc' ? '↑' : '↓'}</span>}
-              </Button>
-              <Button
-                onClick={() => handleSort('status')}
-                variant={sortBy === 'status' ? 'default' : 'outline'}
-                size="lg"
-                className={`${sortBy === 'status' ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-lg shadow-purple-500/30' : 'border-purple-500/50 hover:bg-purple-500/20 text-purple-200 hover:text-white'} transition-all duration-200 hover:scale-105`}
-              >
-                <span className="mr-1">⚡</span>
-                Status 
-                {sortBy === 'status' && <span className="ml-1 font-bold">{sortDir === 'asc' ? '↑' : '↓'}</span>}
-              </Button>
-            </div>
           </div>
           
           {/* Selected Actions */}
@@ -330,18 +312,6 @@ function TodoApp() {
                 <span className="mr-1">✅</span>
                 Done
               </Button>
-              {notification.message && (
-                <span className="text-sm text-gray-300 ml-auto animate-pulse">
-                  {notification.message}
-                </span>
-              )}
-            </div>
-          )}
-          
-          {/* Notification */}
-          {notification.message && !selectedIds.length && (
-            <div className="mt-4 text-sm text-gray-300 animate-pulse">
-              {notification.message}
             </div>
           )}
         </CardContent>
