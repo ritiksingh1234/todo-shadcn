@@ -1,12 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox'
-import { Plus, Search, X } from 'lucide-react'
+import { Search, X, Plus } from 'lucide-react'
 import { useNotificationContext } from '@/context/NotificationManager.tsx'
 import {
   DataTable
@@ -95,7 +94,6 @@ function useTodos() {
 }
 
 function TodoApp() {
-  const [newTodo, setNewTodo] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState('');
   const [deleteDialogId, setDeleteDialogId] = useState(null);
@@ -107,6 +105,8 @@ function TodoApp() {
   const ITEMS_PER_PAGE = 5;
   const { showBrowserNotification, permission, requestPermission } = useNotificationContext();
   const [notification, setNotification] = useState({ message: '', variant: 'success' });
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [newTodo, setNewTodo] = useState('');
 
   // Use the custom hook for todos management
   const { todos, addTodo, toggleTodo, deleteTodo, updateTodo, deleteMultiple, markMultipleDone } = useTodos();
@@ -154,15 +154,6 @@ function TodoApp() {
   const showMessage = (msg, variant = 'success') => {
     setNotification({ message: msg, variant });
     setTimeout(() => setNotification({ message: '', variant: 'success' }), 3000);
-  };
-
-  const handleAddTodo = () => {
-    if (newTodo.trim()) {
-      addTodo(newTodo);
-      setNewTodo('');
-      showBrowserNotification('Task Added!', { body: newTodo });
-      showMessage('✅ Task Added!');
-    }
   };
 
   const handleToggleTodo = (id) => {
@@ -261,24 +252,17 @@ function TodoApp() {
               </Button>
             )}
           </div>
-        </CardHeader>
-
-        {/* Input */}
-        <CardContent className="pb-4">
-          <div className="flex gap-3 items-center">
-            <Input
-              value={newTodo}
-              onChange={(e) => setNewTodo(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleAddTodo()}
-              placeholder="Add New Todo"
-              className="flex-1 bg-white/10 border-white/20 text-white placeholder-gray-400 focus-visible:ring-purple-500 focus-visible:ring-2 py-5 text-base"
-            />
-            <Button onClick={handleAddTodo} size="lg" className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 px-8 shadow-lg shadow-purple-500/30 transition-all duration-300 hover:scale-105">
+          <div className="flex justify-center mt-3">
+            <Button 
+              onClick={() => setIsAddDialogOpen(true)}
+              size="lg"
+              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-lg shadow-purple-500/30 transition-all duration-300 hover:scale-105"
+            >
               <Plus className="h-5 w-5 mr-2" />
               New Todo
             </Button>
           </div>
-        </CardContent>
+        </CardHeader>
 
         {/* Search and Sort */}
         <CardContent className="pb-6">
@@ -411,6 +395,63 @@ function TodoApp() {
             </Button>
             <Button type="button" variant="destructive" onClick={() => handleDeleteTodo(deleteDialogId)}>
               Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Todo Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
+        setIsAddDialogOpen(open);
+        if (!open) setNewTodo('');
+      }}>
+        <DialogContent className="bg-white/10 backdrop-blur-xl border-white/20 text-white">
+          <DialogHeader>
+            <DialogTitle>Add New Todo</DialogTitle>
+            <DialogDescription className="text-gray-300">
+              Enter the details for your new task.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              value={newTodo}
+              onChange={(e) => setNewTodo(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && newTodo.trim()) {
+                  addTodo(newTodo);
+                  showBrowserNotification('Task Added!', { body: newTodo });
+                  showMessage('✅ Task Added!');
+                  setNewTodo('');
+                  setIsAddDialogOpen(false);
+                }
+              }}
+              placeholder="Enter task title..."
+              autoFocus
+              className="bg-white/10 border-white/20 text-white placeholder-gray-400 focus-visible:ring-purple-500 focus-visible:ring-2"
+            />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="outline" onClick={() => {
+              setIsAddDialogOpen(false);
+              setNewTodo('');
+            }}>
+              Cancel
+            </Button>
+            <Button 
+              type="button" 
+              onClick={() => {
+                if (newTodo.trim()) {
+                  addTodo(newTodo);
+                  showBrowserNotification('Task Added!', { body: newTodo });
+                  showMessage('✅ Task Added!');
+                  setNewTodo('');
+                  setIsAddDialogOpen(false);
+                }
+              }}
+              disabled={!newTodo.trim()}
+              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500"
+            >
+              Add Task
             </Button>
           </DialogFooter>
         </DialogContent>
